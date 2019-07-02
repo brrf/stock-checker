@@ -4,12 +4,24 @@ var express     = require('express');
 var bodyParser  = require('body-parser');
 var expect      = require('chai').expect;
 var cors        = require('cors');
+var mongoose = require('mongoose');
+const helmet = require('helmet');
 
 var apiRoutes         = require('./routes/api.js');
 var fccTestingRoutes  = require('./routes/fcctesting.js');
 var runner            = require('./test-runner');
 
 var app = express();
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'"]
+    }
+  }
+}))
+
 
 app.use('/public', express.static(process.cwd() + '/public'));
 
@@ -38,8 +50,8 @@ app.use(function(req, res, next) {
 });
 
 //Start our server and tests!
-app.listen(process.env.PORT || 3000, function () {
-  console.log("Listening on port " + process.env.PORT);
+app.listen(3000, function () {
+  console.log("Listening on port " + 3000);
   if(process.env.NODE_ENV==='test') {
     console.log('Running Tests...');
     setTimeout(function () {
@@ -52,6 +64,14 @@ app.listen(process.env.PORT || 3000, function () {
       }
     }, 3500);
   }
+
+  mongoose.connect(process.env.DB_URI, {useNewUrlParser: true});
+
+  var db = mongoose.connection;
+  db.on('error', console.error.bind(console, 'connection error:'));
+  db.once('open', function() {
+    console.log('connected to database')
+  });
 });
 
 module.exports = app; //for testing
