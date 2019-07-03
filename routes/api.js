@@ -28,20 +28,45 @@ module.exports = function (app) {
     	const ticker = req.query.stock;
     	let price;
     	const ip = req.ip;
-    	const like = req.query.like || false;
+    	const likes = req.query.like ? 1 : 0;
 
-    	console.log(like)
+    	
+
 
     	unirest.get(`https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/get-quotes?region=US&lang=en&symbols=${ticker}`)
 		.header("X-RapidAPI-Host", process.env.API_HOST)
 		.header("X-RapidAPI-Key", process.env.API_KEY)
-		.end(function (result) {
+		.end(async function (result) {
 			if ( (typeof result.body.quoteResponse.result[0]) == 'undefined') {
 				res.send('no stock');
 			} else {
 				console.log(result.body.quoteResponse.result[0].regularMarketPrice)
-    			res.json(result.body.quoteResponse.result[0].regularMarketPrice)
+    			price = result.body.quoteResponse.result[0].regularMarketPrice
+
+    			// Access mongodb collection by IP
+		    	let stocks = mongoose.model(ip, stockSchema);
+
+		    	// check if ticker is in database, if not add to database with likes, if it is then just return it
+		    	let stock = await stocks.findOne({stock: ticker});
+		    	console.log(stock)
+		    	if (!stock) {
+		    		stocks.create({
+		    			stock: ticker,
+		    			likes
+		    		})
+		    	}
+		    	res.json({
+		    		stock: ticker,
+		    		price,
+		    		likes
+		    	})
+
+
+
 			}
 		})
+
+
+		
    });   
 }
