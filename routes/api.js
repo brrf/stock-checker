@@ -10,32 +10,38 @@
 
 var expect = require('chai').expect;
 var MongoClient = require('mongodb');
-var unirest = require('unirest');
 require('dotenv').config()
+var unirest = require('unirest');
+const mongoose = require('mongoose');
+const stockSchema = require('../schema')
+
+// const stockHandler = require('../stockHandler')
 
 
 const CONNECTION_STRING = process.env.DB; //MongoClient.connect(CONNECTION_STRING, function(err, db) {});
 
 module.exports = function (app) {
-	let price;
+	let result;
 
   app.route('/api/stock-prices/')
-    .get(async function (req, res){
+    .get(function (req, res) {
+    	const ticker = req.query.stock;
+    	let price;
+    	const ip = req.ip;
+    	const like = req.query.like || false;
 
-  	await unirest.get(`https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/get-quotes?region=US&lang=en&symbols=${req.query.stock}`)
-	.header("X-RapidAPI-Host", process.env.API_HOST)
-	.header("X-RapidAPI-Key", process.env.API_KEY)
-	.end(function (result) {
+    	console.log(like)
 
-	  price = result.body.quoteResponse.result[0].regularMarketPrice;
-	});
-	if (!price) {
-		return res.send('no ticker found')
-	} else {
-		res.json(price)
-	}
-   });
-    
-};
-
-
+    	unirest.get(`https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/get-quotes?region=US&lang=en&symbols=${ticker}`)
+		.header("X-RapidAPI-Host", process.env.API_HOST)
+		.header("X-RapidAPI-Key", process.env.API_KEY)
+		.end(function (result) {
+			if ( (typeof result.body.quoteResponse.result[0]) == 'undefined') {
+				res.send('no stock');
+			} else {
+				console.log(result.body.quoteResponse.result[0].regularMarketPrice)
+    			res.json(result.body.quoteResponse.result[0].regularMarketPrice)
+			}
+		})
+   });   
+}
